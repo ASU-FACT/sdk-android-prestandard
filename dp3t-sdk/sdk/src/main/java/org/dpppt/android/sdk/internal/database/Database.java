@@ -13,6 +13,8 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.location.Location;
+
 import androidx.annotation.NonNull;
 
 import java.io.IOException;
@@ -29,6 +31,7 @@ import org.dpppt.android.sdk.internal.crypto.ContactsFactory;
 import org.dpppt.android.sdk.internal.crypto.CryptoModule;
 import org.dpppt.android.sdk.internal.crypto.EphId;
 import org.dpppt.android.sdk.internal.database.models.Contact;
+import org.dpppt.android.sdk.internal.database.models.DeviceLocation;
 import org.dpppt.android.sdk.internal.database.models.ExposureDay;
 import org.dpppt.android.sdk.internal.database.models.Handshake;
 import org.dpppt.android.sdk.internal.util.DayDate;
@@ -117,6 +120,7 @@ public class Database {
 					new DayDate().subtractDays(CryptoModule.NUMBER_OF_DAYS_TO_KEEP_EXPOSED_DAYS);
 			db.delete(ExposureDays.TABLE_NAME, ExposureDays.REPORT_DATE + " < ?",
 					new String[] { Long.toString(lastDayToKeepMatchedContacts.getStartOfDayTimestamp()) });
+			// TODO delete old location data
 		});
 	}
 
@@ -136,6 +140,8 @@ public class Database {
 		});
 		return values;
 	}
+
+
 
 	public List<Handshake> getHandshakes() {
 		SQLiteDatabase db = databaseOpenHelper.getReadableDatabase();
@@ -202,7 +208,37 @@ public class Database {
 			removeOldData();
 		});
 	}
+	public void saveDeviceLocation(DeviceLocation location){
+		SQLiteDatabase db = databaseOpenHelper.getWritableDatabase();
+		ContentValues values = new ContentValues();
+		values.put(DeviceLocations.TIME,location.getTime());
+		values.put(DeviceLocations.LATITUDE,location.getLatitude());
+		values.put(DeviceLocations.LONGITUDE,location.getLongitude());
+		values.put(DeviceLocations.HASHES,location.getHashes());
+//		values.put(Locations.,location.get);
+		long rowId = db.insertWithOnConflict(DeviceLocations.TABLE_NAME, null, values, CONFLICT_IGNORE);
+		System.out.println("In database, inserted the location:"+location.toString()+"\n at rowid:"+rowId);
 
+	}
+	public ArrayList<DeviceLocation> getDeviceLocations(){
+		SQLiteDatabase db = databaseOpenHelper.getReadableDatabase();
+		Cursor cursor = db
+				.query(DeviceLocations.TABLE_NAME, DeviceLocations.PROJECTION, null, null, null, null, DeviceLocations.ID);
+		return getDeviceLocationsFromCursor(cursor);
+	}
+	private ArrayList<DeviceLocation> getDeviceLocationsFromCursor(Cursor cursor){
+		ArrayList<DeviceLocation> deviceLocations = new ArrayList<>();
+		while (cursor.moveToNext()) {
+			long time = cursor.getLong(cursor.getColumnIndexOrThrow(DeviceLocations.TIME));
+			Double latitude = cursor.getDouble(cursor.getColumnIndexOrThrow(DeviceLocations.LATITUDE));
+			Double longitude = cursor.getDouble(cursor.getColumnIndexOrThrow(DeviceLocations.LONGITUDE));
+			String hashes = cursor.getString(cursor.getColumnIndexOrThrow(DeviceLocations.HASHES));
+			DeviceLocation deviceLocation = new DeviceLocation(time,latitude,longitude,hashes);
+			deviceLocations.add(deviceLocation);
+		}
+		cursor.close();
+		return deviceLocations;
+	}
 	private void addContact(Contact contact) {
 		SQLiteDatabase db = databaseOpenHelper.getWritableDatabase();
 		ContentValues values = new ContentValues();

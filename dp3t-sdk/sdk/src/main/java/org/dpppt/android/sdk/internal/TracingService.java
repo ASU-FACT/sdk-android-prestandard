@@ -9,32 +9,52 @@
  */
 package org.dpppt.android.sdk.internal;
 
-import android.app.*;
+import android.app.AlarmManager;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.location.Location;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.PowerManager;
+import android.widget.Toast;
+
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
 
-import java.util.Collection;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.LocationSettingsRequest;
+import com.google.android.gms.location.SettingsClient;
 
 import org.dpppt.android.sdk.DP3T;
 import org.dpppt.android.sdk.R;
 import org.dpppt.android.sdk.TracingStatus;
 import org.dpppt.android.sdk.internal.crypto.CryptoModule;
+import org.dpppt.android.sdk.internal.database.Database;
+import org.dpppt.android.sdk.internal.database.models.DeviceLocation;
 import org.dpppt.android.sdk.internal.gatt.BleClient;
 import org.dpppt.android.sdk.internal.gatt.BleServer;
 import org.dpppt.android.sdk.internal.gatt.BluetoothServiceStatus;
 import org.dpppt.android.sdk.internal.gatt.BluetoothState;
 import org.dpppt.android.sdk.internal.logger.Logger;
+
+import java.util.ArrayList;
+import java.util.Collection;
 
 import static org.dpppt.android.sdk.internal.AppConfigManager.DEFAULT_SCAN_DURATION;
 import static org.dpppt.android.sdk.internal.AppConfigManager.DEFAULT_SCAN_INTERVAL;
@@ -58,6 +78,15 @@ public class TracingService extends Service {
 
 	private Handler handler;
 	private PowerManager.WakeLock wl;
+
+	private FusedLocationProviderClient fusedLocationClient;
+	private LocationRequest mLocationRequest;
+	private LocationCallback mLocationCallback;
+
+	private long LOCATION_INTERVAL = 10 * 1000;  /* 10 secs */
+	private long FASTEST_INTERVAL = 10*1000; /* 10 secs */
+
+	private Database database;
 
 	private BleServer bleServer;
 	private BleClient bleClient;
@@ -118,6 +147,8 @@ public class TracingService extends Service {
 
 		IntentFilter errorsUpdateFilter = new IntentFilter(BroadcastHelper.ACTION_UPDATE_ERRORS);
 		registerReceiver(errorsUpdateReceiver, errorsUpdateFilter);
+
+		database = new Database(getApplicationContext());
 	}
 
 	@Override
@@ -233,6 +264,12 @@ public class TracingService extends Service {
 		handler = new Handler();
 
 		invalidateForegroundNotification();
+		if(checkPermissions()){
+			startLocationUpdates();
+		}
+		else{
+			// TODO Add code to handle insufficient permissions
+		}
 		restartClient();
 		restartServer();
 	}
@@ -242,6 +279,71 @@ public class TracingService extends Service {
 			handler = new Handler();
 		}
 		invalidateForegroundNotification();
+	}
+	// TODO check for appropriate permissions before starting location updates
+	protected boolean checkPermissions(){return true;}
+
+	protected void startLocationUpdates(){
+		// Create the location request to start receiving updates
+		mLocationRequest = new LocationRequest();
+		mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+		mLocationRequest.setInterval(LOCATION_INTERVAL);
+		mLocationRequest.setFastestInterval(FASTEST_INTERVAL);
+
+		// Create LocationSettingsRequest object using location request
+		LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
+		builder.addLocationRequest(mLocationRequest);
+		LocationSettingsRequest locationSettingsRequest = builder.build();
+		// Check whether location settings are satisfied
+		// https://developers.google.com/android/reference/com/google/android/gms/location/SettingsClient
+		SettingsClient settingsClient = LocationServices.getSettingsClient(this);
+		settingsClient.checkLocationSettings(locationSettingsRequest);
+
+		fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+		mLocationCallback = new LocationCallback(){
+			// Callback function onLocationUpdate called when a location update is received from API
+			@Override
+			public void onLocationResult(LocationResult locationResult) {
+				// do work here
+				onLocationUpdate(locationResult.getLastLocation());
+			}
+		};
+		try{
+			fusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback , Looper.myLooper());
+		}
+		catch(SecurityException e){
+			System.out.println("Not Enough permissions.");
+		}
+
+	}
+	public void onLocationUpdate(Location location) {
+		if(location != null)
+		{
+			// New location has now been determined
+			DeviceLocation deviceLocation = new DeviceLocation(location.getTime(),location.getLatitude(),location.getLongitude());
+			String msg = "Updated Location: " +
+					location.getLatitude() + "," +
+					location.getLongitude();
+//		Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+			// You can now create a LatLng Object for use with maps
+			System.out.println("Recorded DeviceLocation: "+ deviceLocation.toString());
+			//Saving to Database
+			System.out.println("Saving to Database");
+			database.saveDeviceLocation(deviceLocation);
+			// Save location to database
+			System.out.println("Verifying database store:");
+			ArrayList<DeviceLocation> deviceLocations = database.getDeviceLocations();
+			for(DeviceLocation dloc:deviceLocations){
+				System.out.println(dloc.toString());
+			}
+		}
+		else{
+			// TODO handle when Location is null
+		}
+
+	}
+	protected void stopLocationUpdates(){
+		fusedLocationClient.removeLocationUpdates(mLocationCallback);
 	}
 
 	private void restartClient() {
@@ -297,6 +399,7 @@ public class TracingService extends Service {
 
 	private void stopForegroundService() {
 		isFinishing = true;
+		stopLocationUpdates();
 		stopClient();
 		stopServer();
 		BluetoothServiceStatus.resetInstance();

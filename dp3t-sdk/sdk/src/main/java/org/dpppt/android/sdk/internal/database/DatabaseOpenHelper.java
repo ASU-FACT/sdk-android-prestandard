@@ -58,10 +58,12 @@ class DatabaseOpenHelper extends SQLiteOpenHelper {
 				KnownCases.drop(),
 				Handshakes.drop(),
 				ExposureDays.drop(),
+				DeviceLocations.drop(),
 				KnownCases.create(),
 				Handshakes.create(),
 				Contacts.create(),
-				ExposureDays.create()
+				ExposureDays.create(),
+				DeviceLocations.create()
 		).run();
 	}
 
