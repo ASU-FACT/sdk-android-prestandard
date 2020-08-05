@@ -20,6 +20,8 @@ import android.content.Context;
 import android.os.Build;
 import android.os.ParcelUuid;
 
+import com.google.android.gms.tasks.OnSuccessListener;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -27,9 +29,11 @@ import java.util.Map;
 
 import org.dpppt.android.sdk.internal.AppConfigManager;
 import org.dpppt.android.sdk.internal.BroadcastHelper;
+import org.dpppt.android.sdk.internal.LocationService;
 import org.dpppt.android.sdk.internal.crypto.CryptoModule;
 import org.dpppt.android.sdk.internal.crypto.EphId;
 import org.dpppt.android.sdk.internal.database.Database;
+import org.dpppt.android.sdk.internal.database.models.DeviceLocation;
 import org.dpppt.android.sdk.internal.database.models.Handshake;
 import org.dpppt.android.sdk.internal.logger.Logger;
 
@@ -164,9 +168,13 @@ public class BleClient {
 	}
 
 	private Handshake createHandshake(EphId ephId, ScanResult scanResult, int power) {
+		//TODO Get most recent location!
+		DeviceLocation deviceLocation = new DeviceLocation(LocationService.getInstance(context).getLastLocation());
 		return new Handshake(-1, System.currentTimeMillis(), ephId, power, scanResult.getRssi(),
 				BleCompat.getPrimaryPhy(scanResult), BleCompat.getSecondaryPhy(scanResult),
-				scanResult.getTimestampNanos());
+				scanResult.getTimestampNanos(),deviceLocation);
+		// Get Last Location add to Handshake and Write to database
+
 	}
 
 	public synchronized void stopScan() {

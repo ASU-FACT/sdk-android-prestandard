@@ -19,6 +19,7 @@ import androidx.security.crypto.MasterKeys;
 import java.io.IOException;
 import java.security.*;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -34,6 +35,7 @@ import org.dpppt.android.sdk.backend.models.ExposeeAuthMethod;
 import org.dpppt.android.sdk.backend.models.ExposeeAuthMethodJson;
 import org.dpppt.android.sdk.internal.backend.models.ExposeeRequest;
 import org.dpppt.android.sdk.internal.database.models.Contact;
+import org.dpppt.android.sdk.internal.database.models.DeviceLocation;
 import org.dpppt.android.sdk.internal.util.DayDate;
 import org.dpppt.android.sdk.internal.util.Json;
 
@@ -247,7 +249,21 @@ public class CryptoModule {
 		}
 		return null;
 	}
+	public ArrayList<String> hashBtGps(DeviceLocation location){
+		long timeWindow[] = location.getTimeWindow();
+		ArrayList<String> locationHashes = location.getLocationHashes();
+		System.out.println("Current EphId:"+getCurrentEphId().getData());
+		String ephId = toBase64(getCurrentEphId().getData());
+		ArrayList<String> broadcastBTGpsHashes = new ArrayList<>();
+		for(String locationHash:locationHashes){
+			// TODO hash the combination before adding to list
 
+			System.out.println("EphId:"+ephId+"Location Hash:"+locationHash+"Early:"+timeWindow[0]+"Late:"+timeWindow[1]);
+			broadcastBTGpsHashes.add(ephId+locationHash+timeWindow[0]);
+			broadcastBTGpsHashes.add(ephId+locationHash+timeWindow[1]);
+		}
+		return broadcastBTGpsHashes;
+	}
 	@SuppressLint("ApplySharedPref")
 	public void reset() {
 		try {

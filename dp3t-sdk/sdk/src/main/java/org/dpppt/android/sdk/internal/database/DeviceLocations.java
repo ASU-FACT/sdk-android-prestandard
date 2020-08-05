@@ -7,7 +7,7 @@ interface DeviceLocations {
     String TIME = "time";
     String LATITUDE = "latitude";
     String LONGITUDE = "longitude";
-    String HASHES = "hashes";
+//    String HASHES = "hashes";
 
 //    String ALTITUDE = "altitude";
 //    String SPEED = "speed";
@@ -21,8 +21,8 @@ interface DeviceLocations {
             ID,
             TIME,
             LATITUDE,
-            LONGITUDE,
-            HASHES
+            LONGITUDE
+//            HASHES
 //            ,
 //            ALTITUDE,
 //            SPEED,
@@ -38,8 +38,8 @@ interface DeviceLocations {
                 ID + " INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
                 TIME + " INTEGER NOT NULL, " +
                 LATITUDE + " DOUBLE NOT NULL, " +
-                LONGITUDE + " LONGITUDE NOT NULL, " +
-                HASHES +" TEXT"+
+                LONGITUDE + " DOUBLE NOT NULL " +
+//                HASHES +" TEXT"+
 //                ","+
 //                ALTITUDE + " DOUBLE,"+
 //                SPEED + " FLOAT,"+

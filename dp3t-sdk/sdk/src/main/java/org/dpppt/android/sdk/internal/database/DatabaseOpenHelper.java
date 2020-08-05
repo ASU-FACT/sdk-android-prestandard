@@ -63,7 +63,8 @@ class DatabaseOpenHelper extends SQLiteOpenHelper {
 				Handshakes.create(),
 				Contacts.create(),
 				ExposureDays.create(),
-				DeviceLocations.create()
+				DeviceLocations.create(),
+				BroadcastBtLocTokens.create()
 		).run();
 	}
 

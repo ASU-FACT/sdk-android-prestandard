@@ -1,5 +1,7 @@
 package org.dpppt.android.sdk.internal.database.models;
 
+import android.location.Location;
+
 import androidx.annotation.NonNull;
 
 import java.util.ArrayList;
@@ -10,18 +12,28 @@ import com.github.davidmoten.geo.GeoHash;
 
 public class DeviceLocation {
     private int id;
+    private long interval = 10*1000;
     private long time;
     private double latitude;
     private double longitude;
     private String hashes;
     private int hashLength = 8;
     private double[][] radii = {{0.0, 0.0},{0.0001, 0.0},{0.00007, 0.00007},{0.0, 0.0001},{-0.00007, 0.00007},{-0.0001, 0.0},{-0.00007, -0.00007},{0.0, -0.0001},{0.00007, -0.00007}};
-
+    public DeviceLocation(Location location){
+        this.time = location.getTime();
+        this.latitude = location.getLatitude();
+        this.longitude = location.getLongitude();
+    }
+    public DeviceLocation(long time, double latitude, double longitude,long interval) {
+        this.time = time;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.interval = interval;
+    }
     public DeviceLocation(long time, double latitude, double longitude) {
         this.time = time;
         this.latitude = latitude;
         this.longitude = longitude;
-        this.hashes = geohashes(latitude,longitude);
     }
     public DeviceLocation(long time, double latitude, double longitude,String hashes) {
         this.time = time;
@@ -29,17 +41,25 @@ public class DeviceLocation {
         this.longitude = longitude;
         this.hashes = hashes;
     }
-    public String geohashes(double latitude,double longitude){
-        Set<String> hashSet = new HashSet<>();
+    public ArrayList<String> getLocationHashes(){
+        return getGeoHashes();
+    }
+    private ArrayList<String> getGeoHashes(){
+        Set<String> geoHashesSet = new HashSet<>();
         for (double[] radius : radii) {
             double lat = radius[0] + latitude;
             double lon = radius[1] + longitude;
-            hashSet.add(GeoHash.encodeHash(lat, lon, hashLength));
+            geoHashesSet.add(GeoHash.encodeHash(lat, lon, hashLength));
 
         }
-        String hashes = "";
-        for(String hash : hashSet) hashes += hash + ";";
-        return hashes;
+        ArrayList<String> geoHashes = new ArrayList<>(geoHashesSet);
+        return geoHashes;
+    }
+    public long[] getTimeWindow(){
+        long early = (time - interval/2)/interval*interval;
+        long late = (time + interval/2)/interval*interval;
+        long timeWindow[] = {early,late};
+        return timeWindow;
     }
     public long getTime() {
         return time;
