@@ -12,8 +12,8 @@ package org.dpppt.android.sdk.internal.database;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
-import android.location.Location;
 
 import androidx.annotation.NonNull;
 
@@ -24,13 +24,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.bouncycastle.util.test.Test;
 import org.dpppt.android.sdk.BuildConfig;
 import org.dpppt.android.sdk.internal.AppConfigManager;
 import org.dpppt.android.sdk.internal.BroadcastHelper;
 import org.dpppt.android.sdk.internal.crypto.ContactsFactory;
 import org.dpppt.android.sdk.internal.crypto.CryptoModule;
 import org.dpppt.android.sdk.internal.crypto.EphId;
-import org.dpppt.android.sdk.internal.database.models.BroadcastBtLocToken;
+import org.dpppt.android.sdk.internal.database.models.BtLocToken;
 import org.dpppt.android.sdk.internal.database.models.Contact;
 import org.dpppt.android.sdk.internal.database.models.DeviceLocation;
 import org.dpppt.android.sdk.internal.database.models.ExposureDay;
@@ -40,12 +41,13 @@ import org.dpppt.android.sdk.internal.util.DayDate;
 import static android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE;
 
 public class Database {
-
+	Context context;
 	private DatabaseOpenHelper databaseOpenHelper;
 	private DatabaseThread databaseThread;
 
 	public Database(@NonNull Context context) {
 		databaseOpenHelper = DatabaseOpenHelper.getInstance(context);
+		this.context = context;
 		databaseThread = DatabaseThread.getInstance(context);
 	}
 
@@ -122,7 +124,8 @@ public class Database {
 			db.delete(ExposureDays.TABLE_NAME, ExposureDays.REPORT_DATE + " < ?",
 					new String[] { Long.toString(lastDayToKeepMatchedContacts.getStartOfDayTimestamp()) });
 			// TODO delete old location data
-			// TODO delete old broadcastBtLocTokens
+			// TODO delete old broadcastBtLocHashes
+			// TODO delete old receivedBtLocHashes
 		});
 	}
 
@@ -139,24 +142,80 @@ public class Database {
 		DeviceLocation deviceLocation = handshake.getDeviceLocation();
 		values.put(Handshakes.LATITUDE, deviceLocation.getLatitude());
 		values.put(Handshakes.LONGITUDE, deviceLocation.getLongitude());
-
-
-		// TODO get device location at time of handshake, generate hashes, calculate ephid+locHashes+time and save with handshake
+		// TODO Consider calculating hashes for each contact rather than for each handshake
 		databaseThread.post(() -> {
-			db.insert(Handshakes.TABLE_NAME, null, values);
+			final long handshakeId = db.insert(Handshakes.TABLE_NAME, null, values);
+			addReceivedBtLocHashes(new BtLocToken(handshake.getEphId(),handshake.getDeviceLocation()),handshakeId);
 			BroadcastHelper.sendUpdateBroadcast(context);
 		});
+//
+
 		return values;
 	}
 
+	private void addReceivedBtLocHashes(BtLocToken btLocToken, long handshakeId) {
+		System.out.println("Saving received BT token + location hash");
+		System.out.println("Handshake Id = "+handshakeId);
+		SQLiteDatabase db = databaseOpenHelper.getWritableDatabase();
+		ArrayList<String> hashes = CryptoModule.getInstance(context).getHashes(btLocToken);
+		for(String hash: hashes) {
+			ContentValues values = new ContentValues();
+			values.put(ReceivedBtLocHashes.TIME, btLocToken.getDeviceLocation().getTime());
+			values.put(ReceivedBtLocHashes.HASH,hash);
+			values.put(ReceivedBtLocHashes.HANDSHAKE_ID, handshakeId);
+			db.insertWithOnConflict(ReceivedBtLocHashes.TABLE_NAME, null, values, CONFLICT_IGNORE);
+		}
+	}
+	public void addTestHashes(ArrayList<String> hashes) {
+		SQLiteDatabase db = databaseOpenHelper.getWritableDatabase();
+		for(String hash: hashes) {
+			ContentValues values = new ContentValues();
+			values.put(TestHashes.TIME, System.currentTimeMillis());
+			values.put(TestHashes.HASH,hash);
+			db.insertWithOnConflict(TestHashes.TABLE_NAME, null, values, CONFLICT_IGNORE);
+		}
+	}
+	public ArrayList<String> getTestHashes(int count){
+		SQLiteDatabase db = databaseOpenHelper.getReadableDatabase();
+		Cursor cursor;
+		cursor = db.query(TestHashes.TABLE_NAME, TestHashes.PROJECTION, null, null, null, null, TestHashes.ID,String.valueOf(count));
+		return getTestHashesFromCursor(cursor);
+	}
 
+	private ArrayList<String> getTestHashesFromCursor(Cursor cursor) {
+		ArrayList<String> hashes = new ArrayList<>();
+		while (cursor.moveToNext()) {
+			String hash = cursor.getString(cursor.getColumnIndexOrThrow(TestHashes.HASH));
+			hashes.add(hash);
+		}
+		cursor.close();
+		return hashes;
+	}
+	public long getTestHashesCount() {
+		SQLiteDatabase db = databaseOpenHelper.getReadableDatabase();
+		return  DatabaseUtils.queryNumEntries(db, TestHashes.TABLE_NAME);
+	}
 
+	public ArrayList<String> getReceivedBtLocHashes(){
+		SQLiteDatabase db = databaseOpenHelper.getReadableDatabase();
+		Cursor cursor = db
+				.query(ReceivedBtLocHashes.TABLE_NAME, ReceivedBtLocHashes.PROJECTION, null, null, null, null, ReceivedBtLocHashes.ID);
+		return getReceivedBtLocHashesFromCursor(cursor);
+	}
+	public ArrayList<String> getReceivedBtLocHashesFromCursor(Cursor cursor){
+		ArrayList<String> hashes = new ArrayList<>();
+		while (cursor.moveToNext()) {
+			String hash = cursor.getString(cursor.getColumnIndexOrThrow(ReceivedBtLocHashes.HASH));
+			hashes.add(hash);
+		}
+		cursor.close();
+		return hashes;
+	}
 	public List<Handshake> getHandshakes() {
 		SQLiteDatabase db = databaseOpenHelper.getReadableDatabase();
 		Cursor cursor = db.query(Handshakes.TABLE_NAME, Handshakes.PROJECTION, null, null, null, null, Handshakes.ID);
 		return getHandshakesFromCursor(cursor);
 	}
-
 
 	public List<Handshake> getHandshakes(long maxTime) {
 		SQLiteDatabase db = databaseOpenHelper.getReadableDatabase();
@@ -193,6 +252,7 @@ public class Database {
 			DeviceLocation deviceLocation = new DeviceLocation(timestamp,latitude,longitude);
 			Handshake handShake = new Handshake(id, timestamp, ephId, txPowerLevel, rssi, primaryPhy, secondaryPhy,
 					timestampNanos,deviceLocation);
+//			handShake.setHashes(CryptoModule.getInstance(context).getHashes(new BtLocToken(ephId,deviceLocation)));
 			handshakes.add(handShake);
 		}
 		cursor.close();
@@ -225,42 +285,36 @@ public class Database {
 		values.put(DeviceLocations.TIME,location.getTime());
 		values.put(DeviceLocations.LATITUDE,location.getLatitude());
 		values.put(DeviceLocations.LONGITUDE,location.getLongitude());
-//		values.put(DeviceLocations.HASHES,location.getHashes());
-//		values.put(Locations.,location.get);
 		long rowId = db.insertWithOnConflict(DeviceLocations.TABLE_NAME, null, values, CONFLICT_IGNORE);
-//		System.out.println("In database, inserted the location:"+location.toString()+"\n at rowid:"+rowId);
 
 	}
-
-	public long saveBroadcastBtLocTokens(DeviceLocation location, EphId ephId){
-		// TODO save broadcastBtLocTokens. Be sure to keep date as well so that it can be deleted
+	public void saveBroadcastBtLocHashes(BtLocToken btLocToken){
 		SQLiteDatabase db = databaseOpenHelper.getWritableDatabase();
-		ContentValues values = new ContentValues();
-		values.put(BroadcastBtLocTokens.EPHID,ephId.getData());
-		values.put(BroadcastBtLocTokens.TIME,location.getTime());
-		values.put(BroadcastBtLocTokens.LATITUDE,location.getLatitude());
-		values.put(BroadcastBtLocTokens.LONGITUDE,location.getLongitude());
-		long rowId = db.insertWithOnConflict(BroadcastBtLocTokens.TABLE_NAME, null, values, CONFLICT_IGNORE);
-		return rowId;
+		ArrayList<String> hashes = CryptoModule.getInstance(context).getHashes(btLocToken);
+		for(String hash: hashes) {
+			ContentValues values = new ContentValues();
+			values.put(BroadcastBtLocHashes.TIME, btLocToken.getDeviceLocation().getTime());
+			values.put(BroadcastBtLocHashes.HASH,hash);
+			db.insertWithOnConflict(BroadcastBtLocHashes.TABLE_NAME, null, values, CONFLICT_IGNORE);
+		}
+//		addReceivedBtLocHashes(btLocToken);
 	}
-	public ArrayList<BroadcastBtLocToken> getBroadcastBtLocTokens(){
+	public ArrayList<String> getBroadcastBtLocHashes(){
 		SQLiteDatabase db = databaseOpenHelper.getReadableDatabase();
 		Cursor cursor = db
-				.query(BroadcastBtLocTokens.TABLE_NAME, BroadcastBtLocTokens.PROJECTION, null, null, null, null, BroadcastBtLocTokens.ID);
-		return getBroadcastBtLocTokensFromCursor(cursor);
+				.query(BroadcastBtLocHashes.TABLE_NAME, BroadcastBtLocHashes.PROJECTION, null, null, null, null, BroadcastBtLocHashes.ID);
+		return getBroadcastBtLocHashesFromCursor(cursor);
 	}
-	public ArrayList<BroadcastBtLocToken> getBroadcastBtLocTokensFromCursor(Cursor cursor){
-		ArrayList<BroadcastBtLocToken> broadcastBtLocTokens = new ArrayList<>();
+	public ArrayList<String> getBroadcastBtLocHashesFromCursor(Cursor cursor){
+		ArrayList<String> hashes = new ArrayList<>();
 		while (cursor.moveToNext()) {
-			EphId ephId = new EphId(cursor.getBlob(cursor.getColumnIndexOrThrow(BroadcastBtLocTokens.EPHID)));
-			long time = cursor.getLong(cursor.getColumnIndexOrThrow(BroadcastBtLocTokens.TIME));
-			Double latitude = cursor.getDouble(cursor.getColumnIndexOrThrow(BroadcastBtLocTokens.LATITUDE));
-			Double longitude = cursor.getDouble(cursor.getColumnIndexOrThrow(BroadcastBtLocTokens.LONGITUDE));
-			broadcastBtLocTokens.add(new BroadcastBtLocToken(ephId,time,latitude,longitude));
+			String hash = cursor.getString(cursor.getColumnIndexOrThrow(BroadcastBtLocHashes.HASH));
+			hashes.add(hash);
 		}
 		cursor.close();
-		return broadcastBtLocTokens;
+		return hashes;
 	}
+
 	public ArrayList<DeviceLocation> getDeviceLocations(){
 		SQLiteDatabase db = databaseOpenHelper.getReadableDatabase();
 		Cursor cursor = db
@@ -368,5 +422,6 @@ public class Database {
 	public void runOnDatabaseThread(Runnable runnable) {
 		databaseThread.post(runnable);
 	}
+
 
 }

@@ -12,11 +12,10 @@ import com.github.davidmoten.geo.GeoHash;
 
 public class DeviceLocation {
     private int id;
-    private long interval = 10*1000;
+    private long interval = 5*60*1000;
     private long time;
     private double latitude;
     private double longitude;
-    private String hashes;
     private int hashLength = 8;
     private double[][] radii = {{0.0, 0.0},{0.0001, 0.0},{0.00007, 0.00007},{0.0, 0.0001},{-0.00007, 0.00007},{-0.0001, 0.0},{-0.00007, -0.00007},{0.0, -0.0001},{0.00007, -0.00007}};
     public DeviceLocation(Location location){
@@ -35,12 +34,7 @@ public class DeviceLocation {
         this.latitude = latitude;
         this.longitude = longitude;
     }
-    public DeviceLocation(long time, double latitude, double longitude,String hashes) {
-        this.time = time;
-        this.latitude = latitude;
-        this.longitude = longitude;
-        this.hashes = hashes;
-    }
+
     public ArrayList<String> getLocationHashes(){
         return getGeoHashes();
     }
@@ -55,12 +49,7 @@ public class DeviceLocation {
         ArrayList<String> geoHashes = new ArrayList<>(geoHashesSet);
         return geoHashes;
     }
-    public long[] getTimeWindow(){
-        long early = (time - interval/2)/interval*interval;
-        long late = (time + interval/2)/interval*interval;
-        long timeWindow[] = {early,late};
-        return timeWindow;
-    }
+
     public long getTime() {
         return time;
     }
@@ -85,16 +74,9 @@ public class DeviceLocation {
         this.longitude = longitude;
     }
 
-    public String getHashes() {
-        return hashes;
-    }
-
-    public void setHashes(String hashes) {
-        this.hashes = hashes;
-    }
     @NonNull
     public String toString(){
-        return "Time: "+time+"\tLatitude: "+latitude+"\tLongitude: "+longitude+"\tHashes:"+hashes;
+        return "Time: "+time+"\tLatitude: "+latitude+"\tLongitude: "+longitude;
 
     }
     public int getHashLength() {
@@ -103,5 +85,9 @@ public class DeviceLocation {
 
     public void setHashLength(int hashLength) {
         this.hashLength = hashLength;
+    }
+
+    public long getRoundedTimestamp() {
+        return ((long)(time / interval))*interval;
     }
 }

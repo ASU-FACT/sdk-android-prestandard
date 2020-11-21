@@ -152,7 +152,7 @@ public class DP3T {
 		try {
 			Random rand = new Random();
 			vectorsSentCount++;
-			if(vectorsSentCount==1){
+			if(vectorsSentCount%3==1){
 				aggregate = new ArrayList<Integer>();
 			}
 			ArrayList<Integer> hotspotVector = new ArrayList<>();
@@ -162,7 +162,7 @@ public class DP3T {
 			for(int i = 0;i<11;i++){
 				Integer random1 = rand.nextInt(20);
 				hotspotVector.add(random1);
-				if(vectorsSentCount==1){
+				if(vectorsSentCount%3==1){
 					aggregate.add(random1);
 				}
 				else{
@@ -172,17 +172,12 @@ public class DP3T {
 				hotspotRandomVectorA.add(random2);
 				hotspotRandomVectorB.add(hotspotVector.get(i) - random2);
 			}
-			System.out.println("H A B");
-			for(int i=0; i<hotspotVector.size();i++)
-			{
-				System.out.println(hotspotVector.get(i)+" "+hotspotRandomVectorA.get(i)+" "+hotspotRandomVectorB.get(i));
-			}
-			if(vectorsSentCount==3){
-				System.out.println("Aggregate");
-				for(Integer a:aggregate)
-					System.out.print(a+" ");
-				System.out.println();
-
+			System.out.println("HotspotVector = "+hotspotVector);
+			System.out.println("Share A = "+hotspotRandomVectorA);
+			System.out.println("Share B = "+hotspotRandomVectorB);
+			if(vectorsSentCount%3==0){
+				System.out.println("Aggregate = " + aggregate);
+				aggregate = null;
 			}
 			appConfigManager.getBackendReportRepository(context).sendHotspotVectors(hotspotRandomVectorA,hotspotRandomVectorB, new ResponseCallback<Void>() {
 				@Override
@@ -249,8 +244,9 @@ public class DP3T {
 		checkInit();
 
 		DayDate onsetDate = new DayDate(onset.getTime());
-		ExposeeRequest exposeeRequest = CryptoModule.getInstance(context).getSecretKeyForPublishing(onsetDate, exposeeAuthMethod);
-
+		System.out.println("DP3T thread:"+Thread.currentThread());
+//		ExposeeRequest exposeeRequest = CryptoModule.getInstance(context).getSecretKeyForPublishing(onsetDate, exposeeAuthMethod);
+		ExposeeRequest exposeeRequest = CryptoModule.getInstance(context).getHashesForPublishing(onsetDate,exposeeAuthMethod);
 		AppConfigManager appConfigManager = AppConfigManager.getInstance(context);
 		try {
 			appConfigManager.getBackendReportRepository(context).addExposee(exposeeRequest, exposeeAuthMethod,
@@ -283,7 +279,7 @@ public class DP3T {
 		if (exposeeAuthMethod instanceof ExposeeAuthMethodJson) {
 			jsonAuthMethod = (ExposeeAuthMethodJson) exposeeAuthMethod;
 		}
-		ExposeeRequest exposeeRequest = new ExposeeRequest(toBase64(CryptoModule.getInstance(context).getNewRandomKey()),
+		ExposeeRequest exposeeRequest = new ExposeeRequest(toBase64(CryptoModule.getInstance(context).getNewRandomKey()),null,
 				onsetDate.getStartOfDayTimestamp(), 1, jsonAuthMethod);
 		AppConfigManager.getInstance(context).getBackendReportRepository(context)
 				.addExposeeSync(exposeeRequest, exposeeAuthMethod);
@@ -332,4 +328,9 @@ public class DP3T {
 		db.recreateTables(response -> onDeleteListener.run());
 	}
 
+	public static void testMatchingTimeButtonClicked(Context context) {
+		new Thread(() -> SyncWorker.testMatching(context)).start();
+		return;
+
+	}
 }

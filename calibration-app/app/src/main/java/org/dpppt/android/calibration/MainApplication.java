@@ -49,9 +49,9 @@ public class MainApplication extends Application {
 
 //		DP3T.init(context, "org.dpppt.demo", true, publicKey);
 		// Added this
-		DP3T.init(context,new ApplicationInfo("org.dpppt.demo","http://192.168.1.9:8080","http://192.168.1.9:8082","http://192.168.1.9:8082"),publicKey);
+		DP3T.init(context,new ApplicationInfo("org.dpppt.demo","http://192.168.1.10:8080","http://192.168.1.10:8082","http://192.168.1.10:8080"),publicKey);
 		CertificatePinner certificatePinner = new CertificatePinner.Builder()
-				.add("http://192.168.1.9", "sha256/YLh1dUR9y6Kja30RrAn7JKnbQG/uEtLMkBgFF2Fuihg=")
+				.add("http://192.168.1.10", "sha256/YLh1dUR9y6Kja30RrAn7JKnbQG/uEtLMkBgFF2Fuihg=")
 				.build();
 		DP3T.setCertificatePinner(certificatePinner);
 	}
@@ -67,7 +67,8 @@ public class MainApplication extends Application {
 	private BroadcastReceiver sdkReceiver = new BroadcastReceiver() {
 		@Override
 		public void onReceive(Context context, Intent intent) {
-			if (DP3T.getStatus(context).getExposureDays().size() > 0 && !PreferencesUtil.isExposedNotificationShown(context)) {
+//			if (DP3T.getStatus(context).getExposureDays().size() > 0 && !PreferencesUtil.isExposedNotificationShown(context)) {
+			if (!PreferencesUtil.isExposedNotificationShown(context)) {
 				NotificationUtil.showNotification(context, R.string.push_exposed_title,
 						R.string.push_exposed_text, R.drawable.ic_handshakes);
 				PreferencesUtil.setExposedNotificationShown(context);

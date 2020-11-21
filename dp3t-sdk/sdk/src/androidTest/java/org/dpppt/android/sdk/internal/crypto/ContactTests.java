@@ -42,7 +42,7 @@ public class ContactTests {
 
 		for (int offset = -30; offset < -15; offset++) {
 			database.addHandshake(context,
-					new Handshake(0, System.currentTimeMillis() + offset * MINUTE, module.getCurrentEphId(), -21, -70, "", "", 0));
+					new Handshake(0, System.currentTimeMillis() + offset * MINUTE, module.getCurrentEphId(), -21, -70, "", "", 0,null));
 		}
 
 		database.generateContactsFromHandshakes(context);
@@ -72,14 +72,14 @@ public class ContactTests {
 		for (int offset = -30; offset < -15; offset++) {
 			database.addHandshake(context,
 					new Handshake(0, System.currentTimeMillis() - DAY + offset * MINUTE, module.createEphIds(sk0, true).get(5),
-							-21, -70, "", "", 0));
+							-21, -70, "", "", 0, null));
 		}
 		database.generateContactsFromHandshakes(context);
 
 		for (int offset = -30; offset < -15; offset++) {
 			database.addHandshake(context,
 					new Handshake(0, System.currentTimeMillis() + offset * MINUTE, module.createEphIds(sk1, true).get(3),
-							-21, -70, "", "", 0));
+							-21, -70, "", "", 0, null));
 		}
 		database.generateContactsFromHandshakes(context);
 
@@ -105,7 +105,7 @@ public class ContactTests {
 			database.addHandshake(context,
 					new Handshake(0, System.currentTimeMillis() - daysAgo * DAY + offset * MINUTE, module.getCurrentEphId(), -21,
 							-70,
-							"", "", 0));
+							"", "", 0, null));
 		}
 
 		database.generateContactsFromHandshakes(context);
@@ -138,7 +138,7 @@ public class ContactTests {
 			database.addHandshake(context,
 					new Handshake(0, System.currentTimeMillis() - DAY + offset * MINUTE,
 							ephId_person0,
-							-21, -70, "", "", 0));
+							-21, -70, "", "", 0,null));
 		}
 		database.generateContactsFromHandshakes(context);
 
@@ -147,7 +147,7 @@ public class ContactTests {
 			database.addHandshake(context,
 					new Handshake(0, System.currentTimeMillis() - DAY + offset * MINUTE,
 							ephId_person1,
-							-21, -70, "", "", 0));
+							-21, -70, "", "", 0,null));
 		}
 		database.generateContactsFromHandshakes(context);
 
@@ -156,7 +156,7 @@ public class ContactTests {
 		for (int offset = -30; offset < -15; offset++) {
 			database.addHandshake(context,
 					new Handshake(0, System.currentTimeMillis() + offset * MINUTE, ephId_person1_day1,
-							-21, -70, "", "", 0));
+							-21, -70, "", "", 0,null));
 		}
 		database.generateContactsFromHandshakes(context);
 

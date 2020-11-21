@@ -9,7 +9,12 @@
  */
 package org.dpppt.android.sdk.internal.backend;
 
+import org.dpppt.android.sdk.internal.backend.models.ExposedOverview;
 import org.dpppt.android.sdk.internal.backend.proto.Exposed;
+import org.dpppt.android.sdk.internal.gatt.GattConnectionTask;
+
+import java.util.ArrayList;
+import java.util.HashSet;
 
 import retrofit2.Call;
 import retrofit2.http.GET;
@@ -22,4 +27,11 @@ interface BucketService {
 	@GET("v1/exposed/{batchReleaseTime}")
 	Call<Exposed.ProtoExposedList> getExposees(@Path("batchReleaseTime") long batchReleaseTime);
 
+	@Headers("Accept: application/json")
+	@GET("v1/exposedHashes/{batchReleaseTime}")
+	Call<HashSet<String>> getExposeeHashes(@Path("batchReleaseTime") long batchReleaseTime);
+
+	@Headers("Accept: application/json")
+	@GET("v1/testExposedHashes/{count}")
+	Call<HashSet<String>> getTestExposeeHashes(@Path("count") int count);
 }

@@ -14,6 +14,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import androidx.annotation.NonNull;
 
+import org.bouncycastle.util.test.Test;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -59,12 +61,17 @@ class DatabaseOpenHelper extends SQLiteOpenHelper {
 				Handshakes.drop(),
 				ExposureDays.drop(),
 				DeviceLocations.drop(),
+				BroadcastBtLocHashes.drop(),
+				ReceivedBtLocHashes.drop(),
+				TestHashes.drop(),
 				KnownCases.create(),
 				Handshakes.create(),
 				Contacts.create(),
 				ExposureDays.create(),
 				DeviceLocations.create(),
-				BroadcastBtLocTokens.create()
+				BroadcastBtLocHashes.create(),
+				ReceivedBtLocHashes.create(),
+				TestHashes.create()
 		).run();
 	}
 

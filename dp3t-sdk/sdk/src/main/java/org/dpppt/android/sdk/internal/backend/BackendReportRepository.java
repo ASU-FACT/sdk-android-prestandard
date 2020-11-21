@@ -47,7 +47,6 @@ public class BackendReportRepository implements Repository {
 		reportService2 = reportRetrofit2.create(ReportService.class);
 	}
 	public void testGetCall(@NonNull ResponseCallback<Void> responseCallback){
-		System.out.println("In BackendReportRepository Test Backend");
 		reportService2.getBackend().enqueue(new Callback<Void>() {
 			@Override
 			public void onResponse(@NonNull Call<Void> call, @NonNull Response<Void> response) {
@@ -65,23 +64,7 @@ public class BackendReportRepository implements Repository {
 		});
 	}
 	public void sendHotspotVectors(ArrayList<Integer> hotspotRandomVectorA,ArrayList<Integer> hotspotRandomVectorB, @NonNull ResponseCallback<Void> responseCallback){
-		System.out.println("In BackendReportRepository Test Backend");
-
-		reportService1.addHotspot(hotspotRandomVectorA).enqueue(new Callback<Void>() {
-			@Override
-			public void onResponse(@NonNull Call<Void> call, @NonNull Response<Void> response) {
-				if (response.isSuccessful()) {
-					responseCallback.onSuccess(null);
-				} else {
-					onFailure(call, new StatusCodeException(response.raw()));
-				}
-			}
-
-			@Override
-			public void onFailure(@NonNull Call<Void> call, @NonNull Throwable throwable) {
-				responseCallback.onError(throwable);
-			}
-		});
+		
 		reportService2.addHotspot(hotspotRandomVectorB).enqueue(new Callback<Void>() {
 			@Override
 			public void onResponse(@NonNull Call<Void> call, @NonNull Response<Void> response) {
@@ -97,6 +80,22 @@ public class BackendReportRepository implements Repository {
 				responseCallback.onError(throwable);
 			}
 		});
+		reportService1.addHotspot(hotspotRandomVectorA).enqueue(new Callback<Void>() {
+			@Override
+			public void onResponse(@NonNull Call<Void> call, @NonNull Response<Void> response) {
+				if (response.isSuccessful()) {
+					responseCallback.onSuccess(null);
+				} else {
+					onFailure(call, new StatusCodeException(response.raw()));
+				}
+			}
+
+			@Override
+			public void onFailure(@NonNull Call<Void> call, @NonNull Throwable throwable) {
+				responseCallback.onError(throwable);
+			}
+		});
+
 	}
 	public void addExposee(@NonNull ExposeeRequest exposeeRequest, ExposeeAuthMethod exposeeAuthMethod,
 			@NonNull ResponseCallback<Void> responseCallback) {

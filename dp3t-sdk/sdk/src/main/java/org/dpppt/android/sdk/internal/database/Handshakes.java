@@ -47,7 +47,7 @@ interface Handshakes {
 				PHY_SECONDARY + " TEXT," +
 				TIMESTAMP_NANOS + " INTEGER," +
 				LATITUDE + " DOUBLE,"+
-				LONGITUDE + "DOUBLE"+
+				LONGITUDE + " DOUBLE"+
 				")";
 	}
 

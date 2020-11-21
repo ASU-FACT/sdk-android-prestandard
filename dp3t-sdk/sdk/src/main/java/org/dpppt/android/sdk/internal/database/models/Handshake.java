@@ -11,6 +11,8 @@ package org.dpppt.android.sdk.internal.database.models;
 
 import org.dpppt.android.sdk.internal.crypto.EphId;
 
+import java.util.ArrayList;
+
 public class Handshake {
 
 	private int id;
@@ -22,10 +24,11 @@ public class Handshake {
 	private String secondaryPhy;
 	private long timestampNanos;
 	private DeviceLocation deviceLocation;
+//	private ArrayList<String> hashes;
 
 	public Handshake(int id, long timestamp, EphId ephId, int txPowerLevel, int rssi, String primaryPhy, String secondaryPhy,
 			long timestampNanos, DeviceLocation deviceLocation) {
-		this.id = id;
+		this.id = id; 
 		this.timestamp = timestamp;
 		this.ephId = ephId;
 		this.txPowerLevel = txPowerLevel;
@@ -80,4 +83,11 @@ public class Handshake {
 		return txPowerLevel - rssi;
 	}
 
+//	public ArrayList<String> getHashes() {
+//		return hashes;
+//	}
+//
+//	public void setHashes(ArrayList<String> hashes) {
+//		this.hashes = hashes;
+//	}
 }

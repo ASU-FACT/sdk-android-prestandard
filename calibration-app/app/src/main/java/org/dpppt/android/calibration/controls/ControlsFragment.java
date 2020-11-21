@@ -181,6 +181,9 @@ public class ControlsFragment extends Fragment {
 //			myToast.show();
 		});
 
+		view.findViewById(R.id.testMatchingTimeButton).setOnClickListener(v->{
+			DP3T.testMatchingTimeButtonClicked(getContext());
+		});
 
 		Button refreshButton = view.findViewById(R.id.home_button_sync);
 		refreshButton.setOnClickListener(v -> resyncSdk());
@@ -391,7 +394,6 @@ public class ControlsFragment extends Fragment {
 				.setSpan(new StyleSpan(Typeface.BOLD), 0, builder.length() - 1, Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
 		builder.append(getString(R.string.status_advertising, status.isAdvertising())).append("\n")
 				.append(getString(R.string.status_receiving, status.isReceiving())).append("\n");
-
 		long lastSyncDateUTC = status.getLastSyncDate();
 		String lastSyncDateString =
 				lastSyncDateUTC > 0 ? DATE_FORMAT_SYNC.format(new Date(lastSyncDateUTC)) : "n/a";
@@ -419,8 +421,8 @@ public class ControlsFragment extends Fragment {
 
 	private void sendInfectedUpdate(Context context, Date onsetDate, String codeInputBase64) {
 		setExposeLoadingViewVisible(true);
-
-		DP3T.sendIAmInfected(context, onsetDate, new ExposeeAuthMethodJson(codeInputBase64), new ResponseCallback<Void>() {
+		System.out.println("ControlsFragment thread:"+Thread.currentThread());
+		new Thread(()-> DP3T.sendIAmInfected(context, onsetDate, new ExposeeAuthMethodJson(codeInputBase64), new ResponseCallback<Void>() {
 			@Override
 			public void onSuccess(Void response) {
 				DialogUtil.showMessageDialog(context, getString(R.string.dialog_title_success),
@@ -436,7 +438,8 @@ public class ControlsFragment extends Fragment {
 				Log.e(TAG, throwable.getMessage(), throwable);
 				setExposeLoadingViewVisible(false);
 			}
-		});
+		})).start();
+
 	}
 
 	private void setExposeLoadingViewVisible(boolean visible) {

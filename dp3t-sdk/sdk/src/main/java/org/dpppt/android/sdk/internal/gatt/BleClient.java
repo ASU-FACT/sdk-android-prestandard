@@ -17,6 +17,7 @@ import android.bluetooth.le.ScanFilter;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.Context;
+import android.location.Location;
 import android.os.Build;
 import android.os.ParcelUuid;
 
@@ -151,7 +152,9 @@ public class BleClient {
 			if (correctPayload) {
 				// if Android, optimize (meaning: send/read payload directly in the advertisement
 				Logger.i(TAG, "handshake with " + deviceAddr + " (servicedata payload)");
-				handshakesForDevice.add(createHandshake(new EphId(payload), scanResult, power));
+				Handshake handshake = createHandshake(new EphId(payload), scanResult, power);
+				if(handshake!=null)
+					handshakesForDevice.add(handshake);
 			} else {
 				if (handshakesForDevice.isEmpty()) {
 					gattConnectionThread.addTask(new GattConnectionTask(context, bluetoothDevice, scanResult,
@@ -160,7 +163,9 @@ public class BleClient {
 								Logger.i(TAG, "handshake with " + device.getAddress() + " (gatt connection)");
 							}));
 				}
-				handshakesForDevice.add(createHandshake(null, scanResult, power));
+				Handshake handshake = createHandshake(null, scanResult, power);
+				if(handshake!=null)
+					handshakesForDevice.add(handshake);
 			}
 		} catch (Exception e) {
 			Logger.e(TAG, e);
@@ -168,13 +173,17 @@ public class BleClient {
 	}
 
 	private Handshake createHandshake(EphId ephId, ScanResult scanResult, int power) {
-		//TODO Get most recent location!
-		DeviceLocation deviceLocation = new DeviceLocation(LocationService.getInstance(context).getLastLocation());
-		return new Handshake(-1, System.currentTimeMillis(), ephId, power, scanResult.getRssi(),
-				BleCompat.getPrimaryPhy(scanResult), BleCompat.getSecondaryPhy(scanResult),
-				scanResult.getTimestampNanos(),deviceLocation);
-		// Get Last Location add to Handshake and Write to database
-
+		LocationService locationService = LocationService.getInstance(context);
+		if(locationService.isLocationUpdatesEnabled()){
+			Location lastLocation = locationService.getLastLocation();
+			if(lastLocation!=null) {
+				DeviceLocation deviceLocation = new DeviceLocation(lastLocation);
+				return new Handshake(-1, System.currentTimeMillis(), ephId, power, scanResult.getRssi(),
+						BleCompat.getPrimaryPhy(scanResult), BleCompat.getSecondaryPhy(scanResult),
+						scanResult.getTimestampNanos(), deviceLocation);
+			}
+		}
+		return null;
 	}
 
 	public synchronized void stopScan() {

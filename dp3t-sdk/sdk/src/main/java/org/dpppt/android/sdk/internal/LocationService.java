@@ -1,5 +1,6 @@
 package org.dpppt.android.sdk.internal;
 
+import android.app.Application;
 import android.content.Context;
 import android.location.Location;
 import android.os.Looper;
@@ -19,15 +20,16 @@ public class LocationService {
     private LocationRequest mLocationRequest;
     private LocationCallback mLocationCallback;
     private Context mContext;
-    private long LOCATION_INTERVAL;
-    private long FASTEST_INTERVAL;
+    private long LOCATION_INTERVAL = 5 * 60 * 1000;
+    private long FASTEST_INTERVAL = 1 * 1000;
     private static LocationService instance;
-    private boolean isReceivingUpdates = false;
+    private boolean locationUpdatesEnabled = false;
     private Location bestLocation;
-    protected LocationService(Context context,long location_interval,long fastest_interval){
+    protected LocationService(Context context){
         mContext = context;
-        LOCATION_INTERVAL = location_interval;  /* 10 secs */
-        FASTEST_INTERVAL = fastest_interval;
+//        LOCATION_INTERVAL = location_interval;  /* 60 secs */
+//        FASTEST_INTERVAL = fastest_interval;
+        instance = this;
     }
 //    protected void init(){
 //        fusedLocationClient = LocationServices.getFusedLocationProviderClient(mContext);
@@ -38,18 +40,18 @@ public class LocationService {
 //    }
     public static LocationService getInstance(Context context) {
         if(instance==null){
-            instance = new LocationService(context,10*1000,10*1000);
+            instance = new LocationService(context);
 
         }
         return instance;
     }
-    public boolean startLocationUpdates(LocationCallback locationCallback){
-//         Create the location request to start receiving updates
+    public boolean startLocationUpdates(){
+        //         Create the location request to start receiving updates
         mLocationRequest = new LocationRequest();
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         mLocationRequest.setInterval(LOCATION_INTERVAL);
         mLocationRequest.setFastestInterval(FASTEST_INTERVAL);
-        mLocationCallback = locationCallback;
+//        mLocationCallback = locationCallback;
         // Create LocationSettingsRequest object using location request
         LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
         builder.addLocationRequest(mLocationRequest);
@@ -59,30 +61,35 @@ public class LocationService {
         SettingsClient settingsClient = LocationServices.getSettingsClient(mContext);
         settingsClient.checkLocationSettings(locationSettingsRequest);
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(mContext);
-        LocationCallback callback = new LocationCallback(){
+        mLocationCallback = new LocationCallback(){
                 @Override
                 public void onLocationResult(LocationResult locationResult) {
                     bestLocation = locationResult.getLastLocation();
-                    mLocationCallback.onLocationResult(locationResult);
+//                    locationCallback.onLocationResult(locationResult);
                 }
         };
         try{
-            fusedLocationClient.requestLocationUpdates(mLocationRequest, callback, Looper.myLooper());
-            isReceivingUpdates = true;
+            fusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
+            locationUpdatesEnabled = true;
         }
         catch(SecurityException e){
             System.out.println("Not Enough permissions.");
-            isReceivingUpdates = false;
+            locationUpdatesEnabled = false;
         }
-        return isReceivingUpdates;
+        return locationUpdatesEnabled;
     }
     public void stopLocationUpdates(){
-        if(isReceivingUpdates && fusedLocationClient!=null)
+        if(locationUpdatesEnabled && fusedLocationClient!=null)
         {
             fusedLocationClient.removeLocationUpdates(mLocationCallback);
+            locationUpdatesEnabled = false;
+            fusedLocationClient = null;
         }
     }
     public Location getLastLocation(){
         return bestLocation;
+    }
+    public boolean isLocationUpdatesEnabled(){
+        return locationUpdatesEnabled;
     }
 }

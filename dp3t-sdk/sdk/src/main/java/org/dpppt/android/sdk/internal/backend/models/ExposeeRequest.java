@@ -11,19 +11,26 @@ package org.dpppt.android.sdk.internal.backend.models;
 
 import org.dpppt.android.sdk.backend.models.ExposeeAuthMethodJson;
 
+import java.util.ArrayList;
+
 public class ExposeeRequest {
 
 	private String key;
+	private ArrayList<String> hashes;
 	private long keyDate;
 	private ExposeeAuthMethodJson authData;
 	private int fake;
 
-	public ExposeeRequest(String key, long keyDate, ExposeeAuthMethodJson authData) {
-		this(key, keyDate, 0, authData);
+	public ExposeeRequest(String key, ArrayList<String> hashes, long keyDate, ExposeeAuthMethodJson authData) {
+		this(key, hashes, keyDate, 0, authData);
 	}
 
-	public ExposeeRequest(String key, long keyDate, int fake, ExposeeAuthMethodJson authData) {
+	public ExposeeRequest(String key, ArrayList<String> hashes, long keyDate, int fake, ExposeeAuthMethodJson authData) {
 		this.key = key;
+		if(hashes!=null){
+			this.hashes = new ArrayList<>();
+			this.hashes.addAll(hashes);
+		}
 		this.keyDate = keyDate;
 		this.authData = authData;
 		this.fake = fake;
@@ -35,6 +42,14 @@ public class ExposeeRequest {
 
 	public long getKeyDate() {
 		return keyDate;
+	}
+
+	public ArrayList<String> getHashes() {
+		return hashes;
+	}
+
+	public void setHashes(ArrayList<String> hashes) {
+		this.hashes = hashes;
 	}
 
 	public int getFake() {

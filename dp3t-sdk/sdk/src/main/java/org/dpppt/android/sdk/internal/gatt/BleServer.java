@@ -74,6 +74,8 @@ public class BleServer {
 	}
 
 	public BluetoothState startAdvertising() {
+		System.out.println(android.os.Build.VERSION.SDK_INT);
+
 		BluetoothManager mManager = (BluetoothManager) context.getSystemService(Context.BLUETOOTH_SERVICE);
 
 		if (mManager == null || !context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
@@ -81,6 +83,11 @@ public class BleServer {
 		}
 
 		mAdapter = mManager.getAdapter();
+		if(mAdapter==null)
+			System.out.println("Bluetooth not supported");
+		if(!mAdapter.isMultipleAdvertisementSupported()){
+			System.out.println("Device does not support Bluetooth LE.");
+		}
 		mLeAdvertiser = mAdapter.getBluetoothLeAdvertiser();
 		if (mLeAdvertiser == null) {
 			return BluetoothState.NOT_SUPPORTED;

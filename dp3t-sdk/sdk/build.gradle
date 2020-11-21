@@ -128,6 +128,11 @@ dependencies {
 
 	compile 'com.google.android.gms:play-services-location:17.0.0'
 	implementation 'com.github.davidmoten:geo:0.7.1'
+	implementation("com.google.guava:guava:29.0-android")
+	// https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk15on
+	implementation 'org.bouncycastle:bcprov-jdk15on:1.65'
+
+
 
 	implementation 'com.squareup.retrofit2:retrofit:2.8.1'
 	implementation 'com.squareup.retrofit2:converter-gson:2.8.1'
@@ -141,7 +146,7 @@ dependencies {
 	runtimeOnly('io.jsonwebtoken:jjwt-orgjson:0.11.1') {
 		exclude group: 'org.json', module: 'json'
 	}
-	implementation 'org.bouncycastle:bcprov-jdk15on:1.65'
+//	implementation 'org.bouncycastle:bcprov-jdk15on:1.65'
 
 	testImplementation 'junit:junit:4.12'
 

@@ -14,20 +14,25 @@ import androidx.annotation.NonNull;
 
 import java.io.IOException;
 import java.security.PublicKey;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import org.dpppt.android.sdk.backend.SignatureException;
 import org.dpppt.android.sdk.backend.SignatureVerificationInterceptor;
+import org.dpppt.android.sdk.internal.backend.models.ExposedOverview;
 import org.dpppt.android.sdk.internal.backend.proto.Exposed;
 
 import retrofit2.Response;
 import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 import retrofit2.converter.protobuf.ProtoConverterFactory;
 
 public class BackendBucketRepository implements Repository {
 
-	public static long BATCH_LENGTH = 2 * 60 * 60 * 1000L;
+	public static long BATCH_LENGTH = 2 * 60 * 60 * 1000L; // 2 hours
 
 	private BucketService bucketService;
 
@@ -37,8 +42,10 @@ public class BackendBucketRepository implements Repository {
 				.client(getClientBuilder(context)
 						.addInterceptor(new TimingVerificationInterceptor())
 						.addInterceptor(new SignatureVerificationInterceptor(publicKey))
+						.cache(null)
 						.build())
 				.addConverterFactory(ProtoConverterFactory.create())
+				.addConverterFactory(GsonConverterFactory.create())
 				.build();
 
 		bucketService = bucketRetrofit.create(BucketService.class);
@@ -63,5 +70,42 @@ public class BackendBucketRepository implements Repository {
 			throw new StatusCodeException(response.raw());
 		}
 	}
+	public HashSet<String> getExposeeHashes(long batchReleaseTime)
+			throws IOException, StatusCodeException, ServerTimeOffsetException, SignatureException {
+		Response<HashSet<String>> response;
+		try {
+			response = bucketService.getExposeeHashes(batchReleaseTime).execute();
+		} catch (RuntimeException re) {
+			if (re.getCause() instanceof InvalidProtocolBufferException) {
+				// unwrap protobuf exception
+				throw (InvalidProtocolBufferException) re.getCause();
+			} else {
+				throw re;
+			}
+		}
+		if (response.isSuccessful() && response.body() != null) {
+			return response.body();
+		} else {
+			throw new StatusCodeException(response.raw());
+		}
+	}
 
+	public HashSet<String> getTestExposeeHashes(int count) throws IOException, StatusCodeException, ServerTimeOffsetException, SignatureException {
+		Response<HashSet<String>> response;
+		try {
+			response = bucketService.getTestExposeeHashes(count).execute();
+		} catch (RuntimeException re) {
+			if (re.getCause() instanceof InvalidProtocolBufferException) {
+				// unwrap protobuf exception
+				throw (InvalidProtocolBufferException) re.getCause();
+			} else {
+				throw re;
+			}
+		}
+		if (response.isSuccessful() && response.body() != null) {
+			return response.body();
+		} else {
+			throw new StatusCodeException(response.raw());
+		}
+	}
 }

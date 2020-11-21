@@ -19,11 +19,14 @@ import androidx.security.crypto.MasterKeys;
 import java.io.IOException;
 import java.security.*;
 import java.util.ArrayList;
-import java.util.Base64;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
 import javax.crypto.Mac;
 import javax.crypto.NoSuchPaddingException;
@@ -34,12 +37,19 @@ import javax.crypto.spec.SecretKeySpec;
 import org.dpppt.android.sdk.backend.models.ExposeeAuthMethod;
 import org.dpppt.android.sdk.backend.models.ExposeeAuthMethodJson;
 import org.dpppt.android.sdk.internal.backend.models.ExposeeRequest;
+import org.dpppt.android.sdk.internal.database.Database;
+import org.dpppt.android.sdk.internal.database.models.BtLocToken;
 import org.dpppt.android.sdk.internal.database.models.Contact;
 import org.dpppt.android.sdk.internal.database.models.DeviceLocation;
+import org.dpppt.android.sdk.internal.logger.Logger;
 import org.dpppt.android.sdk.internal.util.DayDate;
 import org.dpppt.android.sdk.internal.util.Json;
 
 import static org.dpppt.android.sdk.internal.util.Base64Util.toBase64;
+
+import com.google.common.io.BaseEncoding;
+import com.google.common.primitives.Bytes;
+import com.google.common.primitives.Longs;
 
 public class CryptoModule {
 
@@ -53,14 +63,17 @@ public class CryptoModule {
 
 	private static final String KEY_SK_LIST_JSON = "SK_LIST_JSON";
 	private static final String KEY_EPHIDS_TODAY_JSON = "EPHIDS_TODAY_JSON";
+	private byte[] SALT = "salt".getBytes();
 
+	private static String TAG = CryptoModule.class.getCanonicalName();
 	private static CryptoModule instance;
 
 	private SharedPreferences esp;
-
+	private static Context mContext;
 	public static CryptoModule getInstance(Context context) {
 		if (instance == null) {
 			instance = new CryptoModule();
+			mContext = context;
 			try {
 				String KEY_ALIAS = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC);
 				instance.esp = EncryptedSharedPreferences.create("dp3t_store",
@@ -236,34 +249,34 @@ public class CryptoModule {
 		for (Pair<DayDate, byte[]> daySKPair : skList) {
 			if (daySKPair.first.equals(date)) {
 				return new ExposeeRequest(
-						toBase64(daySKPair.second),
+						toBase64(daySKPair.second), null,
 						daySKPair.first.getStartOfDayTimestamp(),
 						jsonAuth);
 			}
 		}
 		if (date.isBefore(skList.get(skList.size() - 1).first)) {
 			return new ExposeeRequest(
-					toBase64(skList.get(skList.size() - 1).second),
+					toBase64(skList.get(skList.size() - 1).second), null,
 					skList.get(skList.size() - 1).first.getStartOfDayTimestamp(),
 					jsonAuth);
 		}
 		return null;
 	}
-	public ArrayList<String> hashBtGps(DeviceLocation location){
-		long timeWindow[] = location.getTimeWindow();
-		ArrayList<String> locationHashes = location.getLocationHashes();
-		System.out.println("Current EphId:"+getCurrentEphId().getData());
-		String ephId = toBase64(getCurrentEphId().getData());
-		ArrayList<String> broadcastBTGpsHashes = new ArrayList<>();
-		for(String locationHash:locationHashes){
-			// TODO hash the combination before adding to list
-
-			System.out.println("EphId:"+ephId+"Location Hash:"+locationHash+"Early:"+timeWindow[0]+"Late:"+timeWindow[1]);
-			broadcastBTGpsHashes.add(ephId+locationHash+timeWindow[0]);
-			broadcastBTGpsHashes.add(ephId+locationHash+timeWindow[1]);
-		}
-		return broadcastBTGpsHashes;
-	}
+//	public ArrayList<String> hashBtGps(EphId ephId, DeviceLocation deviceLocation, long timestamp){
+//		long timeWindow[] = deviceLocation.getTimeWindow();
+//		ArrayList<String> locationHashes = deviceLocation.getLocationHashes();
+//		System.out.println("Current EphId:"+getCurrentEphId().getData());
+//		String ephId = toBase64(getCurrentEphId().getData());
+//		ArrayList<String> broadcastBTGpsHashes = new ArrayList<>();
+//		for(String locationHash:locationHashes){
+//
+//
+//			System.out.println("EphId:"+ephId+"Location Hash:"+locationHash+"Early:"+timeWindow[0]+"Late:"+timeWindow[1]);
+//			broadcastBTGpsHashes.add(ephId+locationHash+timeWindow[0]);
+//			broadcastBTGpsHashes.add(ephId+locationHash+timeWindow[1]);
+//		}
+//		return broadcastBTGpsHashes;
+//	}
 	@SuppressLint("ApplySharedPref")
 	public void reset() {
 		try {
@@ -273,8 +286,90 @@ public class CryptoModule {
 			ex.printStackTrace();
 		}
 	}
+	public ArrayList<String> getHashes(BtLocToken btLocToken){
 
-	public interface GetContactsCallback {
+		DeviceLocation deviceLocation = btLocToken.getDeviceLocation();
+
+		long roundedTimestamp = deviceLocation.getRoundedTimestamp();
+
+		EphId ephId = btLocToken.getEphId();
+		ArrayList<String> locationHashes = deviceLocation.getLocationHashes();
+
+		ArrayList<String> hashes = new ArrayList<>();
+		for(String locHash: locationHashes){
+			// encrypt ephid, lochash, time
+			try {
+				hashes.add(digest(ephId, roundedTimestamp, locHash));
+			}
+			catch (IOException | DigestException | NoSuchPaddingException | NoSuchAlgorithmException | InvalidKeyException | BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException e){
+				Logger.e(TAG,e);
+			}
+		}
+		return hashes;
+	}
+	private String digest(EphId ephId, long timestamp, String locHash) throws IOException, DigestException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, InvalidAlgorithmParameterException {
+//		byte[] source = Bytes.concat(ephId.getData(),locHash.getBytes(), Longs.toByteArray(timestamp));
+//		byte[] crpyt = SCrypt.generate(source, SALT, 4096, 8, 1, 8);
+//		try{
+//			MessageDigest md = MessageDigest.getInstance("SHA-256");
+//			md.update(source);
+//			MessageDigest tc1 = (MessageDigest) md.clone();
+//			byte[] crypt = tc1.digest();
+//			StringBuilder sb = new StringBuilder();
+//			for(byte b:crypt)
+//				sb.append(String.format("%02X",b));
+//			return sb.toString();
+//		}
+//		catch(CloneNotSupportedException | NoSuchAlgorithmException cnse){
+//			throw new DigestException("Couldn't make digest of content");
+//		}
+		BaseEncoding baseEncoding = BaseEncoding.base16();
+		byte[] key = ephId.getData();
+		byte[] plaintext = Bytes.concat(locHash.getBytes(), Longs.toByteArray(timestamp));
+		byte[] iv = new byte[16];
+		IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
+		SecretKey secretKey = new SecretKeySpec(key, "AES");
+		System.out.println("Secret key (BT token) = "+baseEncoding.encode(secretKey.getEncoded()));
+		System.out.println("Geohash = "+locHash);
+		System.out.println("Rounded time stamp = " + timestamp);
+		final Cipher cipher = Cipher.getInstance("AES/CBC/NoPadding");
+		cipher.init(Cipher.ENCRYPT_MODE, secretKey, ivParameterSpec);
+		byte[] cipherText = cipher.doFinal(plaintext);
+		byte[] truncatedCipherText = Arrays.copyOfRange(cipherText,0,10);
+		String encode = baseEncoding.encode(truncatedCipherText);
+		System.out.println("AES Encrypted ciphertext = "+ encode +"; Size = "+encode.length());
+		return encode;
+	}
+
+	public ExposeeRequest getHashesForPublishing(DayDate date, ExposeeAuthMethod exposeeAuthMethod) {
+		// Get BroadcastBtGpsTokens from database
+		System.out.println("Crypto thread:"+Thread.currentThread());
+		Database database = new Database(mContext);
+		ArrayList<String> hashes = database.getBroadcastBtLocHashes();
+
+		// return ExposeeRequest with the hashes
+		System.out.println("Sent hashes:"+hashes);
+		SKList skList = getSKList();
+		ExposeeAuthMethodJson jsonAuth =
+				exposeeAuthMethod instanceof ExposeeAuthMethodJson ? (ExposeeAuthMethodJson) exposeeAuthMethod : null;
+		for (Pair<DayDate, byte[]> daySKPair : skList) {
+			if (daySKPair.first.equals(date)) {
+				return new ExposeeRequest(
+						toBase64(daySKPair.second), hashes,
+						daySKPair.first.getStartOfDayTimestamp(),
+						jsonAuth);
+			}
+		}
+		if (date.isBefore(skList.get(skList.size() - 1).first)) {
+			return new ExposeeRequest(
+					toBase64(skList.get(skList.size() - 1).second), hashes,
+					skList.get(skList.size() - 1).first.getStartOfDayTimestamp(),
+					jsonAuth);
+		}
+		return null;
+    }
+
+    public interface GetContactsCallback {
 		/**
 		 * @param timeFrom timestamp inclusive
 		 * @param timeUntil timestamp exclusive

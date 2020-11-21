@@ -107,6 +107,12 @@
 			app:icon="@drawable/ic_refresh" />
 
 		<Button
+			android:id="@+id/testMatchingTimeButton"
+			android:layout_width="154dp"
+			android:layout_height="wrap_content"
+			android:text="Test Matching Time" />
+
+		<Button
 			android:id="@+id/postButton"
 			android:layout_width="100dp"
 			android:layout_height="wrap_content"

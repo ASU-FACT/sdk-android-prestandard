@@ -27,6 +27,7 @@ import android.os.Handler;
 import android.os.IBinder;
 
 import android.os.PowerManager;
+import android.util.Log;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
@@ -41,7 +42,7 @@ import org.dpppt.android.sdk.TracingStatus;
 import org.dpppt.android.sdk.internal.crypto.CryptoModule;
 import org.dpppt.android.sdk.internal.crypto.EphId;
 import org.dpppt.android.sdk.internal.database.Database;
-import org.dpppt.android.sdk.internal.database.models.BroadcastBtLocToken;
+import org.dpppt.android.sdk.internal.database.models.BtLocToken;
 import org.dpppt.android.sdk.internal.database.models.DeviceLocation;
 import org.dpppt.android.sdk.internal.gatt.BleClient;
 import org.dpppt.android.sdk.internal.gatt.BleServer;
@@ -82,12 +83,10 @@ public class TracingService extends Service {
 
 	private BleServer bleServer;
 	private BleClient bleClient;
-
 	private LocationService locationService;
-	private boolean startTracking = true;
-	private long LOCATION_INTERVAL = 10 * 1000;  /* 10 secs */
-	private long FASTEST_INTERVAL = 10*1000;
 
+
+	private Runnable periodicLocationUpdatesRunnable;
 
 	private final BroadcastReceiver bluetoothStateChangeReceiver = new BroadcastReceiver() {
 		@Override
@@ -124,10 +123,12 @@ public class TracingService extends Service {
 
 	private boolean startAdvertising;
 	private boolean startReceiving;
+	private boolean startTracking;
 	private long scanInterval;
 	private long scanDuration;
 
 	private boolean isFinishing;
+	private long locationInterval = 10000;//300000; // 5 minutes
 
 	public TracingService() { }
 
@@ -170,6 +171,7 @@ public class TracingService extends Service {
 
 		startAdvertising = intent.getBooleanExtra(EXTRA_ADVERTISE, true);
 		startReceiving = intent.getBooleanExtra(EXTRA_RECEIVE, true);
+		startTracking = true;
 
 		if (ACTION_START.equals(intent.getAction())) {
 			startForeground(NOTIFICATION_ID, createForegroundNotification());
@@ -262,30 +264,9 @@ public class TracingService extends Service {
 		handler = new Handler();
 
 		invalidateForegroundNotification();
-//		if(checkPermissions()){
-//			startLocationUpdates();
-//			System.out.println("Starting again");
-//			LocationService.getInstance(this).getLastLocation(new OnSuccessListener<Location>() {
-//				@Override
-//				public void onSuccess(Location location) {
-//					System.out.println("Received location" + location);
-//					//System.out.println((new DeviceLocation(location)).toString());
-//				}
-//			});
-//		}
-//		else{
-//			// TODO Add code to handle insufficient permissions
-//		}
 		restartTrackingLocation();
 		restartClient();
 		restartServer();
-//		locationService.getLastLocation(new OnSuccessListener<Location>() {
-//				@Override
-//				public void onSuccess(Location location) {
-//					System.out.println("Received location" + location);
-//					//System.out.println((new DeviceLocation(location)).toString());
-//				}
-//			});
 	}
 
 	private void ensureStarted() {
@@ -294,8 +275,9 @@ public class TracingService extends Service {
 		}
 		invalidateForegroundNotification();
 	}
-	// TODO check for appropriate permissions before starting location updates
+
 	protected boolean checkPermissions(){return true;}
+
 	protected void restartTrackingLocation(){
 		boolean isTrackingLocation = startTrackingLocation();
 		if(!isTrackingLocation){
@@ -304,32 +286,35 @@ public class TracingService extends Service {
 	}
 	protected boolean startTrackingLocation(){
 		stopTrackingLocation();
-		if(startTracking) {
-			locationService = new LocationService(this,LOCATION_INTERVAL, FASTEST_INTERVAL);
+		boolean isTracking = false;
+		// TODO check for appropriate permissions before starting location updates
+		if(checkPermissions() && startTracking) {
+			locationService = LocationService.getInstance(getApplicationContext());
 			Logger.d(TAG, "startTrackingLocation");
-			LocationCallback locationCallback = createLocationUpdatesCallback();
-			boolean isTracking = locationService.startLocationUpdates(locationCallback);
-			return isTracking;
+			if(!locationService.isLocationUpdatesEnabled()) {
+				isTracking = locationService.startLocationUpdates();
+			}
+			periodicLocationUpdatesRunnable = new Runnable() {
+				@Override
+				public void run() {
+					Log.d("runnableSaveLocation", "Called on main thread");
+					onLocationUpdate(locationService.getLastLocation());
+					handler.postDelayed(this, locationInterval);
+				}
+			};
+			// schedule the onLocationUpdate function
+			handler.post(periodicLocationUpdatesRunnable);
+
 		}
-		else return false;
+
+		return isTracking;
 	}
 	protected void stopTrackingLocation(){
 		if(locationService != null){
 			locationService.stopLocationUpdates();
+			handler.removeCallbacks(periodicLocationUpdatesRunnable);
 			locationService = null;
 		}
-	}
-	protected LocationCallback createLocationUpdatesCallback(){
-		return new LocationCallback(){
-			// Callback function onLocationUpdate called when a location update is received from API
-			@Override
-			public void onLocationResult(LocationResult locationResult) {
-				// do work here
-				onLocationUpdate(locationResult.getLastLocation());
-//				System.out.println("Received location update");
-			}
-
-		};
 	}
 //	protected void startLocationUpdates(){
 ////		// Create the location request to start receiving updates
@@ -389,7 +374,6 @@ public class TracingService extends Service {
 //					}
 //				}
 //				else{
-//					// TODO handle when Location is null
 //				}
 //			}
 //		};
@@ -400,40 +384,19 @@ public class TracingService extends Service {
 	public void onLocationUpdate(Location location) {
 		if(location != null)
 		{
-//			// New location has now been determined
-//			DeviceLocation deviceLocation = new DeviceLocation(location.getTime(),location.getLatitude(),location.getLongitude(),LOCATION_INTERVAL);
-//			String msg = "Updated Location: " +
-//					location.getLatitude() + "," +
-//					location.getLongitude();
-////		Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
-//			// You can now create a LatLng Object for use with maps
-//			System.out.println("Recorded DeviceLocation: "+ deviceLocation.toString());
-//			//Saving to Database
-//			System.out.println("Saving to Database");
-//			database.saveDeviceLocation(deviceLocation);
-//			// Save location to database
-//			System.out.println("Verifying database store:");
-//			ArrayList<DeviceLocation> deviceLocations = database.getDeviceLocations();
-//			for(DeviceLocation dloc:deviceLocations){
-//				System.out.println(dloc.toString());
-//			}
 			// Save device location
-			DeviceLocation deviceLocation = new DeviceLocation(location.getTime(),location.getLatitude(),location.getLongitude(),LOCATION_INTERVAL);
+			DeviceLocation deviceLocation = new DeviceLocation(location.getTime(),location.getLatitude(),location.getLongitude());
+			System.out.println("Location Update = "+deviceLocation);
 			CryptoModule cryptoModule = CryptoModule.getInstance(getApplicationContext());
-			EphId currentEphId = cryptoModule.getCurrentEphId();
-			System.out.println("Current Eph Id = "+currentEphId.getData()+"length = "+currentEphId.getData().length);
-			// TODO Can add code to save previousLocation, compare with currentDeviceLocation, if nearby, use previousLocationGeohashes. Cannot skip saving even if current Bluetooth token is same because we have different time window! Finally escaped the circular loop of reasoning to avoid saving location!!
+			EphId ephId = cryptoModule.getCurrentEphId();
 			database.saveDeviceLocation(deviceLocation);
-//			ArrayList<String> locationHashes = deviceLocation.getLocationHashes();
-//			ArrayList<String> broadcastBTGpsHashes = cryptoModule.hashBtGps(deviceLocation);
-//			System.out.println(broadcastBTGpsHashes);
-			// TODO save broadcastbtgpstokens
-			long id = database.saveBroadcastBtLocTokens(deviceLocation, currentEphId);
-			System.out.println("Saved BtGps token "+toBase64(currentEphId.getData())+" at row id = "+id);
-			System.out.println("Getting tokens from Db");
-			ArrayList<BroadcastBtLocToken> tokens = database.getBroadcastBtLocTokens();
-			System.out.println("Received from database:"+tokens.get(tokens.size()-1));
-			System.out.println("Verifying if callbacks are set up correctly. Best location = "+locationService.getLastLocation());
+			BtLocToken btLocToken = new BtLocToken(ephId, deviceLocation);
+			System.out.println("Saving bt+loc tokens");
+			database.saveBroadcastBtLocHashes(btLocToken);
+//			System.out.println("EphId = "+ toBase64(ephId.getData()));
+//			System.out.println("Rounded timestamp = "+ deviceLocation.getRoundedTimestamp());
+//			System.out.println("Geohashes = "+deviceLocation.getLocationHashes());
+//
 		}
 		else{
 			// TODO handle when Location is null
