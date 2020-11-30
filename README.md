@@ -1,35 +1,36 @@
-# DP3T-SDK for Android
-[![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://github.com/DP-3T/dp3t-sdk-android/blob/master/LICENSE)
-![Android Build](https://github.com/DP-3T/dp3t-sdk-android/workflows/Android%20Build/badge.svg)
-![Android Tests](https://github.com/DP-3T/dp3t-sdk-android/workflows/Android%20Tests/badge.svg)
+# ASU-FACT SDK For Android
 
-## DP3T
-The Decentralised Privacy-Preserving Proximity Tracing (DP-3T) project is an open protocol for COVID-19 proximity tracing using Bluetooth Low Energy functionality on mobile devices that ensures personal data and computation stays entirely on an individual's phone. It was produced by a core team of over 25 scientists and academic researchers from across Europe. It has also been scrutinized and improved by the wider community.
+## ASU-FACT - Arizona State University - Federated Analytics based Contact Tracing platform
+Existing contact tracing protocols based solely on exchange of random tokens via Bluetooth Low Energy (BLE) are vulnerable to a range of attacks. Moreover, they do not leverage the rich device-level data for providing intelligent assessment and useful indicators. FACT provides a secure Contact Tracing (CT) protocol based on BLE+GPS, and applies a refined paradigm of federated learning to leverage both device-level data and server capabilities. FACT enable private, secure CT for prevention and intervention by including hotspot identification, user alerts, and continual assessment of user COVID-19 risk. This approach guarantees a private, secure, and verifiable way to (i) evaluate a user’s need for testing or their resilience to exposure, and (ii) assess herd immunity across the population.
+Goals of the FACT framework:
+Secure, Resilient and Scalable Contact Tracing
+Assessing User Risk in a Federated Manner
+Scalable and Private FL for FACT
 
+
+# SDK for Android
+This repository contains the Software Development Kit code based on Android for the secure contact tracing protocol based on Bluetooth+GPS. The overview of the protocol is as
+
+## Based on DP3T
+The Decentralised Privacy-Preserving Proximity Tracing (DP-3T) project is an open protocol for COVID-19 proximity tracing using Bluetooth Low Energy functionality on mobile devices that ensures personal data and computation stays entirely on an individual's phone.
 DP-3T is a free-standing effort started at EPFL and ETHZ that produced this protocol and that is implementing it in an open-sourced app and server.
 
 
 ## Introduction
-This is the first implementation of the DP-3T "low bandwidth" protocol. The current implementation does not use the as yet unreleased "Contact Tracing" API of Apple/Google--**and has limitations as a result**. Our "hybrid approach" uses Bluetooth Low Energy (BLE) to exchange `EphID`s. It uses advertisements whenever possible and falls back to GATT Server connections if not possible to transmit/collect an `EphID` this way (e.g., on iOS devices when the app is in background). This approach can result in higher energy consumption and scalability issues and will be replaced by the Apple/Google API.
-
-Our immediate roadmap is: to support the Apple/Google wire protocol, to be forward-compatible, and to support the actual Apple/Google API as soon as it is released to iOS and Android devices.
+The high-level representation of the protocol is depicted in Figure \ref{fig:protocol}. When two users are in close proximity, the devices exchange random tokens via BLE. Each device periodically stores the user location as well. The random tokens are augmented with location data. If the user is infected, the device computes hashes of broadcast tokens with the location and timestamp of broadcast, and then shared with the server. When a device receives a token, it stores the hash of the received token, geohash, and timestamp. Devices periodically query the server to receive the newly uploaded infected user hashes. These hashes are compared with hashes of received tokens and an exposure is reported if there’s a match.\\ 
+For determining areas of high-risk, the goal is to research and develop a solution based on secure aggregation techniques. Each user device stores the location trace. By securely aggregating traces of multiple positively diagnosed users, the locations above a threshold number of visits can be regarded as hotspots. Defining the protocol efficiently without revealing any single user's trace is essential.
 
 ## Repositories
-* Android SDK & Calibration app: [dp3t-sdk-android](https://github.com/DP-3T/dp3t-sdk-android)
-* iOS SDK & Calibration app: [dp3t-sdk-ios](https://github.com/DP-3T/dp3t-sdk-ios)
-* Android Demo App: [dp3t-app-android](https://github.com/DP-3T/dp3t-app-android)
-* iOS Demo App: [dp3t-app-ios](https://github.com/DP-3T/dp3t-app-ios)
-* Backend SDK: [dp3t-sdk-backend](https://github.com/DP-3T/dp3t-sdk-backend)
+* Android SDK & Calibration app: [dp3t-sdk-android](https://github.com/DP-3T/sdk-android-prestandard)
+* Android App: [dp3t-app-android](https://github.com/ASU-FACT/calibration-app)
+* Backend-A SDK: [dp3t-sdk-backend](https://github.com/ASU-FACT/backend-A)
+* Backend-B SDK: [dp3t-sdk-backend](https://github.com/ASU-FACT/backend-B)
 
 ## Work in Progress
-The DP3T-SDK for Android contains alpha-quality code only and is not yet complete. It has not yet been reviewed or audited for security and compatibility. We are both continuing the development and have started a security review. This project is truly open-source and we welcome any feedback on the code regarding both the implementation and security aspects.
+The SDK for Android contains code for prototyping and development and is not yet complete. It has not yet been reviewed or audited for security and compatibility. We are both continuing the development and have started a security review. This project is truly open-source and we welcome any feedback on the code regarding both the implementation and security aspects.
 This repository contains the open prototype SDK, so please focus your feedback for this repository on implementation issues.
 
-## Further Documentation
-The full set of documents for DP3T is at https://github.com/DP-3T/documents. Please refer to the technical documents and whitepapers for a description of the implementation.
 
-## Architecture
-A central discovery service is hosted on [Github](https://github.com/DP-3T/dp3t-discovery). This server provides the necessary information for the SDK to initialize itself. After the SDK loads the base url for its own backend, it will load the infected list from there, as well as post if a user is infected. This will also allow apps to fetch lists from other backend systems participating in this scheme and can handle roaming of users.
 
 ## Calibration App
 Included in this repository is a Calibration App that can run, debug and test the SDK directly without implementing it in a new app first. It collects additional data and stores it locally into a database to allow for tests with phones from different vendors. Various parameters of the SDK are exposed and can be changed at runtime. Additionally it provides an overview of how to use the SDK.
