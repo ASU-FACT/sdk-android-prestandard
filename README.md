@@ -7,18 +7,19 @@ Secure, Resilient and Scalable Contact Tracing
 Assessing User Risk in a Federated Manner
 Scalable and Private FL for FACT
 
+# Introduction
+The overview of the protocol is as shown in the figure below.
+<p align="center">
+    <img src="Protocol.png" width="512">
+</p>
+When two users are in close proximity, the devices exchange random tokens via BLE. Each device periodically stores the user location as well. The random tokens are augmented with location data. If the user is infected, the device computes hashes of broadcast tokens with the location and timestamp of broadcast, and then shared with the server. When a device receives a token, it stores the hash of the received token, geohash, and timestamp. Devices periodically query the server to receive the newly uploaded infected user hashes. These hashes are compared with hashes of received tokens and an exposure is reported if there’s a match.
+<!-- For determining areas of high-risk, the goal is to research and develop a solution based on secure aggregation techniques. Each user device stores the location trace. By securely aggregating traces of multiple positively diagnosed users, the locations above a threshold number of visits can be regarded as hotspots.  -->
 
-# SDK for Android
-This repository contains the Software Development Kit code based on Android for the secure contact tracing protocol based on Bluetooth+GPS. The overview of the protocol is as
-
-## Based on DP3T
-The Decentralised Privacy-Preserving Proximity Tracing (DP-3T) project is an open protocol for COVID-19 proximity tracing using Bluetooth Low Energy functionality on mobile devices that ensures personal data and computation stays entirely on an individual's phone.
-DP-3T is a free-standing effort started at EPFL and ETHZ that produced this protocol and that is implementing it in an open-sourced app and server.
-
-
-## Introduction
-The high-level representation of the protocol is depicted in Figure \ref{fig:protocol}. When two users are in close proximity, the devices exchange random tokens via BLE. Each device periodically stores the user location as well. The random tokens are augmented with location data. If the user is infected, the device computes hashes of broadcast tokens with the location and timestamp of broadcast, and then shared with the server. When a device receives a token, it stores the hash of the received token, geohash, and timestamp. Devices periodically query the server to receive the newly uploaded infected user hashes. These hashes are compared with hashes of received tokens and an exposure is reported if there’s a match.\\ 
-For determining areas of high-risk, the goal is to research and develop a solution based on secure aggregation techniques. Each user device stores the location trace. By securely aggregating traces of multiple positively diagnosed users, the locations above a threshold number of visits can be regarded as hotspots. Defining the protocol efficiently without revealing any single user's trace is essential.
+## SDK for Android
+This repository contains the Software Development Kit code based on Android for the secure contact tracing protocol using Bluetooth+GPS. It extends from the DP-3T prestandard SDK for Android, which is based on BLE. The Decentralised Privacy-Preserving Proximity Tracing ([DP-3T](https://github.com/DP-3T)) project is an open protocol for COVID-19 proximity tracing using BLE. It has been implemented as an open source protocol in the form of an app and server. We modify and extend the DP3T BT based protocol, in which BT tokens are exchanged, and a key is shared with the server when a user is infected. In our protocol, the BT tokens are augmented with location data. For an infected user, the Hashes of BT token, location co-ordinates and time stamp are shared with the server. Extensions made in this SDK are:
+* Periodic Location Updates: The SDK includes a class that provides periodic device location updates.
+* Storage of received BT token + Geohash + timestamp as a hash.
+* Fetching hashes of infected users from server and matching with received hashes to provide potential exposure update.
 
 ## Repositories
 * Android SDK & Calibration app: [dp3t-sdk-android](https://github.com/DP-3T/sdk-android-prestandard)
@@ -27,8 +28,7 @@ For determining areas of high-risk, the goal is to research and develop a soluti
 * Backend-B SDK: [dp3t-sdk-backend](https://github.com/ASU-FACT/backend-B)
 
 ## Work in Progress
-The SDK for Android contains code for prototyping and development and is not yet complete. It has not yet been reviewed or audited for security and compatibility. We are both continuing the development and have started a security review. This project is truly open-source and we welcome any feedback on the code regarding both the implementation and security aspects.
-This repository contains the open prototype SDK, so please focus your feedback for this repository on implementation issues.
+The SDK for Android contains code for prototyping and testing the protocol, and is not yet complete. It has not yet been reviewed or audited for security and compatibility. 
 
 
 
@@ -41,7 +41,8 @@ Included in this repository is a Calibration App that can run, debug and test th
   <img src="calibration-app/screenshots/3.png" width="256">
 </p>
 
-## Function overview
+
+<!-- ## Function overview
 
 ### Initialization
 Name | Description | Function Name
@@ -151,4 +152,4 @@ DP3T.sync(getContext());
 Make sure you do not call this method on the UI thread, because it will perform the sync synchronously.
 
 ## License
-This project is licensed under the terms of the MPL 2 license. See the [LICENSE](LICENSE) file.
+This project is licensed under the terms of the MPL 2 license. See the [LICENSE](LICENSE) file. -->
