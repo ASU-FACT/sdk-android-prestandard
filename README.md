@@ -42,7 +42,7 @@ Included in this repository is a Calibration App that can run, debug and test th
 </p>
 
 
-<!-- ## Function overview
+## Function overview
 
 ### Initialization
 Name | Description | Function Name
@@ -152,4 +152,5 @@ DP3T.sync(getContext());
 Make sure you do not call this method on the UI thread, because it will perform the sync synchronously.
 
 ## License
-This project is licensed under the terms of the MPL 2 license. See the [LICENSE](LICENSE) file. -->
+This project is licensed under the terms of the MPL 2 license. See the [LICENSE](LICENSE) file. 
+<!-- -->
