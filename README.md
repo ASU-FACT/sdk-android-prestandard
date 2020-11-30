@@ -41,7 +41,7 @@ Included in this repository is a Calibration App that can run, debug and test th
   <img src="calibration-app/screenshots/3.png" width="256">
 </p>
 
-
+The below documentation is from DP3T SDK for Android
 ## Function overview
 
 ### Initialization
