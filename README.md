@@ -28,7 +28,7 @@ This repository contains the Software Development Kit code based on Android for 
 * Backend-B SDK: [dp3t-sdk-backend](https://github.com/ASU-FACT/backend-B)
 
 ## Work in Progress
-The SDK for Android contains code for prototyping and testing the protocol, and is not yet complete. It has not yet been reviewed or audited for security and compatibility. 
+The below documentation is from DP3T SDK for Android. The SDK for Android contains code for prototyping and testing the protocol, and is not yet complete. It has not yet been reviewed or audited for security and compatibility. 
 
 
 
@@ -41,7 +41,7 @@ Included in this repository is a Calibration App that can run, debug and test th
   <img src="calibration-app/screenshots/3.png" width="256">
 </p>
 
-The below documentation is from DP3T SDK for Android
+
 ## Function overview
 
 ### Initialization
